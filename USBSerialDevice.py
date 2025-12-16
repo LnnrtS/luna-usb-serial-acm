@@ -9,19 +9,16 @@ from litex.soc.interconnect import stream
 
 # Create a migen module to interface into a compiled nmigen module
 class USBSerialDevice(Module):
-    def __init__(self, platform, ulpi_pads, stream_clockdomain="sys", usb_clockdomain="usb"):
+    def __init__(self, platform, usb_pads, stream_clockdomain="sys", usb_clockdomain="usb"):
         # Attach verilog block to module
         vdir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "verilog")
         platform.add_source(os.path.join(vdir, f"LunaUSBSerialDevice.v"))
-        ulpi_data = TSTriple(8)
-
-        # Active LOW reset signal
-        reset = Signal()
-        self.comb += ulpi_pads.rst.eq(~reset)
+        dp = TSTriple(1)
+        dn = TSTriple(1)
 
         # Stream interface in/out of logic
-        self.usb_tx = stream.Endpoint([("data", 8)])
-        self.usb_rx = stream.Endpoint([("data", 8)])
+        self.sink = self.usb_tx = stream.Endpoint([("data", 8)])
+        self.source = self.usb_rx = stream.Endpoint([("data", 8)])
 
         # Add clock domain crossing FIFOs
         tx_cdc = stream.ClockDomainCrossing([("data", 8)], stream_clockdomain, usb_clockdomain)
@@ -32,7 +29,11 @@ class USBSerialDevice(Module):
             self.usb_rx.connect(rx_cdc.source)
         ]
         
-        self.specials += ulpi_data.get_tristate(ulpi_pads.data)
+        self.specials += [
+            dp.get_tristate(usb_pads.d_p),
+            dn.get_tristate(usb_pads.d_n),
+        ]
+            
 
         self.params = dict(
             # Clock / Reset
@@ -40,14 +41,13 @@ class USBSerialDevice(Module):
             i_clk_sync   = ClockSignal(usb_clockdomain),
             i_rst_sync   = ResetSignal(usb_clockdomain),
 
-            o_ulpi__data__o = ulpi_data.o,
-            o_ulpi__data__oe = ulpi_data.oe,
-            i_ulpi__data__i = ulpi_data.i,
-            o_ulpi__clk__o = ulpi_pads.clk,
-            o_ulpi__stp = ulpi_pads.stp,
-            i_ulpi__nxt__i = ulpi_pads.nxt,
-            i_ulpi__dir__i = ulpi_pads.dir,
-            o_ulpi__rst = reset, 
+            o_raw_usb__d_p__o = dp.o,
+            o_raw_usb__d_p__oe = dp.oe,
+            i_raw_usb__d_p__i = dp.i,
+            o_raw_usb__d_n__o = dn.o,
+            o_raw_usb__d_n__oe = dn.oe,
+            i_raw_usb__d_n__i = dn.i,
+            o_raw_usb__pullup__o = usb_pads.pullup,
 
             # Tx stream (Data out: USB device to computer)
             o_tx__ready = tx_cdc.source.ready,
