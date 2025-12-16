@@ -3,10 +3,10 @@
 
 import os
 
-from nmigen import Record, Signal, Module, Elaboratable, ClockDomain, ClockSignal, ResetSignal
+from amaranth import Record, Signal, Module, Elaboratable, ClockDomain, ClockSignal, ResetSignal
 
-from nmigen.hdl.rec import DIR_FANIN, DIR_FANOUT, DIR_NONE
-from nmigen.back import verilog
+from amaranth.hdl.rec import DIR_FANIN, DIR_FANOUT, DIR_NONE
+from amaranth.back import verilog
 
 from luna.full_devices import USBSerialDevice as LunaDeviceACM
 from luna.gateware.architecture.car import PHYResetController
