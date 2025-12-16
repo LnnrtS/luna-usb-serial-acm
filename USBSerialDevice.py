@@ -24,9 +24,10 @@ class USBSerialDevice(Module):
         tx_cdc = stream.ClockDomainCrossing([("data", 8)], stream_clockdomain, usb_clockdomain)
         rx_cdc = stream.ClockDomainCrossing([("data", 8)], usb_clockdomain, stream_clockdomain)
         self.submodules += tx_cdc, rx_cdc
+        
         self.comb += [
-            tx_cdc.sink.connect(self.usb_tx),
-            self.usb_rx.connect(rx_cdc.source)
+            self.usb_tx.connect(tx_cdc.sink),
+            rx_cdc.source.connect(self.usb_rx),
         ]
         
         self.specials += [
