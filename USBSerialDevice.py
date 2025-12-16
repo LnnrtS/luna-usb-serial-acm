@@ -9,7 +9,7 @@ from litex.soc.interconnect import stream
 
 # Create a migen module to interface into a compiled nmigen module
 class USBSerialDevice(Module):
-    def __init__(self, platform, usb_pads, stream_clockdomain="sys", usb_clockdomain="usb"):
+    def __init__(self, platform, usb_pads, stream_clockdomain="sys", usb_clockdomain="usb", usb_io_clockdomain="usb_io"):
         # Attach verilog block to module
         vdir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "verilog")
         platform.add_source(os.path.join(vdir, f"LunaUSBSerialDevice.v"))
@@ -40,6 +40,9 @@ class USBSerialDevice(Module):
             i_clk_usb   = ClockSignal(usb_clockdomain),
             i_clk_sync   = ClockSignal(usb_clockdomain),
             i_rst_sync   = ResetSignal(usb_clockdomain),
+
+            i_usb_io_clk = ClockSignal(usb_io_clockdomain),
+            i_usb_io_rst = ResetSignal(usb_io_clockdomain),
 
             o_raw_usb__d_p__o = dp.o,
             o_raw_usb__d_p__oe = dp.oe,
