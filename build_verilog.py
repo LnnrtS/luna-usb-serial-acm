@@ -14,18 +14,15 @@ from luna.gateware.architecture.car import PHYResetController
 # Create a nmigen module that exposes external interfaces as Signal/Record attributes of the class
 class LunaUSBSerialDevice(Elaboratable):
     def __init__(self):
-        self.ulpi = Record(
+        self.raw_usb = Record(
             [
-                ('data', [('i', 8, DIR_FANIN), ('o', 8, DIR_FANOUT), ('oe', 1, DIR_FANOUT)]),
-                ('clk', [('o', 1, DIR_FANOUT)]),
-                ('stp', [('o', 1, DIR_FANOUT)]),
-                ('nxt', [('i', 1, DIR_FANIN)]),
-                ('dir', [('i', 1, DIR_FANIN)]),
-                ('rst', [('o', 1, DIR_FANOUT)])
+                ("d_p",    [('i', 1, DIR_FANIN), ('o', 1, DIR_FANOUT), ('oe', 1, DIR_FANOUT)]),
+                ("d_n",    [('i', 1, DIR_FANIN), ('o', 1, DIR_FANOUT), ('oe', 1, DIR_FANOUT)]),
+                ("pullup", [('o', 1, DIR_FANIN)]),
             ]
         )
 
-        self.usb0 = usb = LunaDeviceACM(bus=self.ulpi, idVendor=0x1209, idProduct=0x5af1, 
+        self.usb0 = usb = LunaDeviceACM(bus=self.raw_usb, idVendor=0x1209, idProduct=0x5af1, 
                 manufacturer_string="GsD", product_string="ButterStick r1.0 ACM")
         
         self.rx = Record(usb.rx.layout)
