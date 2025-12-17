@@ -2,6 +2,7 @@
 # License: BSD
 
 import os
+from pathlib import Path
 
 from amaranth import Record, Signal, Module, Elaboratable, ClockDomain, ClockSignal, ResetSignal
 
@@ -107,10 +108,11 @@ def build(
             ports += port._lhs_signals()
 
     verilog_text = verilog.convert(elaboratable, name=name, ports=ports, strip_internal_attrs=True)
-    verilog_file = f"verilog/{name}.v"
 
-    vdir = os.path.join(os.getcwd(), "verilog")
+    vdir = Path(__file__).parent / "verilog"
     os.makedirs(vdir, exist_ok=True)
+
+    verilog_file = vdir / f"{name}.v"
 
     with open(verilog_file, "w") as f:
         f.write(verilog_text)
