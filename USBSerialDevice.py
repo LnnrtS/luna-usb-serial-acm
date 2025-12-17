@@ -1,18 +1,23 @@
 # This file is Copyright (c) 2023-2021 Greg Davill <greg.davill@gmail.com>
 # License: BSD
 
-import os
-
-from migen import *
-import litex
+from migen import Module, TSTriple, ClockSignal, ResetSignal, Instance
+# import litex
 from litex.soc.interconnect import stream
 
-# Create a migen module to interface into a compiled nmigen module
+from build_verilog import build
+
+
 class USBSerialDevice(Module):
+    """
+    Wrapper for compiled amaranth module
+    """
     def __init__(self, platform, usb_pads, stream_clockdomain="sys", usb_clockdomain="usb", usb_io_clockdomain="usb_io"):
+
+        verilog_file, module_name = build()
+
         # Attach verilog block to module
-        vdir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "verilog")
-        platform.add_source(os.path.join(vdir, f"LunaUSBSerialDevice.v"))
+        platform.add_source(verilog_file)
         dp = TSTriple(1)
         dn = TSTriple(1)
 
@@ -45,6 +50,7 @@ class USBSerialDevice(Module):
             i_usb_io_clk = ClockSignal(usb_io_clockdomain),
             i_usb_io_rst = ResetSignal(usb_io_clockdomain),
 
+            # IO
             o_raw_usb__d_p__o = dp.o,
             o_raw_usb__d_p__oe = dp.oe,
             i_raw_usb__d_p__i = dp.i,
@@ -68,6 +74,6 @@ class USBSerialDevice(Module):
             o_rx__payload = rx_cdc.sink.data,
         )
 
-        self.specials += Instance("LunaUSBSerialDevice",
+        self.specials += Instance(module_name,
             **self.params
         )
