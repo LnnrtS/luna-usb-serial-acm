@@ -5,7 +5,7 @@ from migen import Module, TSTriple, ClockSignal, ResetSignal, Instance
 # import litex
 from litex.soc.interconnect import stream
 
-from build_verilog import build
+from .build_verilog import build
 
 
 class USBSerialDevice(Module):
