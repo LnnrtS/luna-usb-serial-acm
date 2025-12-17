@@ -1,0 +1,10 @@
+[project]
+name = "luna-usb-serial-acm"
+version = "0.1.0"
+dependencies = [
+    "litex",
+    "luna-usb @ git+https://github.com/greatscottgadgets/luna"]
+
+[build-system]
+requires = ["setuptools>=43.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
