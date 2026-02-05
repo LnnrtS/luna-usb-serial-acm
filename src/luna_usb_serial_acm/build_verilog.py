@@ -18,7 +18,8 @@ def build(
     idProduct=0x5af1,
     manufacturer_string="GSD",
     product_string="ButterStick r1.0 ACM",
-    ulpi = False
+    ulpi = False,
+    output_dir = None
     ):
 
     class LunaUSBSerialDevice(Elaboratable):
@@ -122,10 +123,12 @@ def build(
 
     verilog_text = verilog.convert(elaboratable, name=name, ports=ports, strip_internal_attrs=True)
 
-    vdir = Path(__file__).parent / "verilog"
-    os.makedirs(vdir, exist_ok=True)
+    if output_dir is None:
+        output_dir = Path(__file__).parent / "verilog"
 
-    verilog_file = vdir / f"{name}.v"
+    os.makedirs(output_dir, exist_ok=True)
+
+    verilog_file = output_dir / f"{name}.v"
 
     with open(verilog_file, "w") as f:
         f.write(verilog_text)
