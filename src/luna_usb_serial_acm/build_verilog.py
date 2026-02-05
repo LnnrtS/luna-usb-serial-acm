@@ -111,7 +111,7 @@ def build(
     ])
 
     elaboratable = LunaUSBSerialDevice(bus = ulpi_pads if ulpi else raw_pads)
-    name = 'LunaUSBSerialDevice'
+    name = 'LunaUSBSerialDevice_ULPI' if ulpi else 'LunaUSBSerialDevice_RAW'
 
     ports = []
 
