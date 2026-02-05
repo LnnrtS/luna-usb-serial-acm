@@ -14,8 +14,10 @@ class USBSerialDevice(Module):
     """
     def __init__(self, platform, usb_pads, stream_clockdomain="sys", usb_clockdomain="usb", usb_io_clockdomain="usb_io"):
 
+        # heuristically determine phy type used based
         use_ulpi_phy = hasattr(usb_pads, "clk")
 
+        # build verilog
         verilog_file, module_name = build(ulpi=use_ulpi_phy)
 
         # Attach verilog block to module
@@ -34,24 +36,6 @@ class USBSerialDevice(Module):
             self.usb_tx.connect(tx_cdc.sink),
             rx_cdc.source.connect(self.usb_rx),
         ]
-        
-        if not use_ulpi_phy:
-            dp = TSTriple(1)
-            dn = TSTriple(1)
-
-            self.specials += [
-                dp.get_tristate(usb_pads.d_p),
-                dn.get_tristate(usb_pads.d_n),
-            ]
-        else:
-            # Active LOW reset signal
-            reset = Signal()
-            self.comb += usb_pads.rst.eq(~reset)
-
-            ulpi_data = TSTriple(8)
-
-            self.specials += ulpi_data.get_tristate(usb_pads.data)
-            
 
         self.params = dict(
             # Clock / Reset
@@ -73,8 +57,21 @@ class USBSerialDevice(Module):
             o_rx__last = rx_cdc.sink.last,
             o_rx__payload = rx_cdc.sink.data,
         )
+        
+        ##### Phy specific setup
 
         if not use_ulpi_phy:
+
+            # Create tristates
+            dp = TSTriple(1)
+            dn = TSTriple(1)
+
+            self.specials += [
+                dp.get_tristate(usb_pads.d_p),
+                dn.get_tristate(usb_pads.d_n),
+            ]
+
+            # Connect pads to phy
             self.params = self.params | dict(
                 i_usb_io_clk = ClockSignal(usb_io_clockdomain),
                 i_usb_io_rst = ResetSignal(usb_io_clockdomain),
@@ -90,6 +87,16 @@ class USBSerialDevice(Module):
             )
 
         else:
+
+            # Active LOW reset signal
+            reset = Signal()
+            self.comb += usb_pads.rst.eq(~reset)
+
+            # Create tristate
+            ulpi_data = TSTriple(8)
+            self.specials += ulpi_data.get_tristate(usb_pads.data)
+            
+            # Connect pads to phy
             self.params = self.params | dict(
                 o_ulpi_pads__data__o  = ulpi_data.o,
                 o_ulpi_pads__data__oe = ulpi_data.oe,
