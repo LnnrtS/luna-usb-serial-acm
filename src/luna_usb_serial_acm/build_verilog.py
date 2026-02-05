@@ -17,24 +17,20 @@ def build(
     idVendor=0x1209,
     idProduct=0x5af1,
     manufacturer_string="GSD",
-    product_string="ButterStick r1.0 ACM"
+    product_string="ButterStick r1.0 ACM",
+    ulpi = False
     ):
 
     class LunaUSBSerialDevice(Elaboratable):
         """
         Amaranth module that exposes internal interfaces as Signal/Record attributes
         """
-        def __init__(self):
-            self.raw_usb = Record(
-                [
-                    ("d_p",    [('i', 1, DIR_FANIN), ('o', 1, DIR_FANOUT), ('oe', 1, DIR_FANOUT)]),
-                    ("d_n",    [('i', 1, DIR_FANIN), ('o', 1, DIR_FANOUT), ('oe', 1, DIR_FANOUT)]),
-                    ("pullup", [('o', 1, DIR_FANIN)]),
-                ]
-            )
+        def __init__(self, bus):
+
+            self.bus = bus
 
             self.usb0 = usb = LunaDeviceACM(
-                bus=self.raw_usb,
+                bus=bus,
                 idVendor=idVendor,
                 idProduct=idProduct, 
                 manufacturer_string=manufacturer_string,
@@ -97,7 +93,24 @@ def build(
             return m
 
 
-    elaboratable = LunaUSBSerialDevice()
+    raw_pads = Record(
+    [
+        ("d_p",    [('i', 1, DIR_FANIN), ('o', 1, DIR_FANOUT), ('oe', 1, DIR_FANOUT)]),
+        ("d_n",    [('i', 1, DIR_FANIN), ('o', 1, DIR_FANOUT), ('oe', 1, DIR_FANOUT)]),
+        ("pullup", [('o', 1, DIR_FANIN)]),
+    ])
+
+    ulpi_pads = Record(
+    [
+        ('data', [('i', 8, DIR_FANIN), ('o', 8, DIR_FANOUT), ('oe', 1, DIR_FANOUT)]),
+        ('clk', [('o', 1, DIR_FANOUT)]),
+        ('stp', [('o', 1, DIR_FANOUT)]),
+        ('nxt', [('i', 1, DIR_FANIN)]),
+        ('dir', [('i', 1, DIR_FANIN)]),
+        ('rst', [('o', 1, DIR_FANOUT)])
+    ])
+
+    elaboratable = LunaUSBSerialDevice(bus = ulpi_pads if ulpi else raw_pads)
     name = 'LunaUSBSerialDevice'
 
     ports = []
@@ -120,5 +133,3 @@ def build(
     return verilog_file, name
 
 
-if __name__ == "__main__":
-    build()

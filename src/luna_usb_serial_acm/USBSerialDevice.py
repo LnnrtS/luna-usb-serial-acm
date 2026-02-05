@@ -1,7 +1,7 @@
 # This file is Copyright (c) 2023-2021 Greg Davill <greg.davill@gmail.com>
 # License: BSD
 
-from migen import Module, TSTriple, ClockSignal, ResetSignal, Instance
+from migen import Module, TSTriple, ClockSignal, ResetSignal, Instance, Signal
 # import litex
 from litex.soc.interconnect import stream
 
@@ -14,12 +14,12 @@ class USBSerialDevice(Module):
     """
     def __init__(self, platform, usb_pads, stream_clockdomain="sys", usb_clockdomain="usb", usb_io_clockdomain="usb_io"):
 
-        verilog_file, module_name = build()
+        use_ulpi_phy = hasattr(usb_pads, "clk")
+
+        verilog_file, module_name = build(ulpi=use_ulpi_phy)
 
         # Attach verilog block to module
         platform.add_source(verilog_file)
-        dp = TSTriple(1)
-        dn = TSTriple(1)
 
         # Stream interface in/out of logic
         self.sink = self.usb_tx = stream.Endpoint([("data", 8)])
@@ -35,10 +35,22 @@ class USBSerialDevice(Module):
             rx_cdc.source.connect(self.usb_rx),
         ]
         
-        self.specials += [
-            dp.get_tristate(usb_pads.d_p),
-            dn.get_tristate(usb_pads.d_n),
-        ]
+        if not use_ulpi_phy:
+            dp = TSTriple(1)
+            dn = TSTriple(1)
+
+            self.specials += [
+                dp.get_tristate(usb_pads.d_p),
+                dn.get_tristate(usb_pads.d_n),
+            ]
+        else:
+            # Active LOW reset signal
+            reset = Signal()
+            self.comb += usb_pads.rst.eq(~reset)
+
+            ulpi_data = TSTriple(8)
+
+            self.specials += ulpi_data.get_tristate(usb_pads.data)
             
 
         self.params = dict(
@@ -46,18 +58,6 @@ class USBSerialDevice(Module):
             i_clk_usb   = ClockSignal(usb_clockdomain),
             i_clk_sync   = ClockSignal(usb_clockdomain),
             i_rst_sync   = ResetSignal(usb_clockdomain),
-
-            i_usb_io_clk = ClockSignal(usb_io_clockdomain),
-            i_usb_io_rst = ResetSignal(usb_io_clockdomain),
-
-            # IO
-            o_raw_usb__d_p__o = dp.o,
-            o_raw_usb__d_p__oe = dp.oe,
-            i_raw_usb__d_p__i = dp.i,
-            o_raw_usb__d_n__o = dn.o,
-            o_raw_usb__d_n__oe = dn.oe,
-            i_raw_usb__d_n__i = dn.i,
-            o_raw_usb__pullup__o = usb_pads.pullup,
 
             # Tx stream (Data out: USB device to computer)
             o_tx__ready = tx_cdc.source.ready,
@@ -73,6 +73,33 @@ class USBSerialDevice(Module):
             o_rx__last = rx_cdc.sink.last,
             o_rx__payload = rx_cdc.sink.data,
         )
+
+        if not use_ulpi_phy:
+            self.params = self.params | dict(
+                i_usb_io_clk = ClockSignal(usb_io_clockdomain),
+                i_usb_io_rst = ResetSignal(usb_io_clockdomain),
+
+                # IO
+                o_raw_pads__d_p__o    = dp.o,
+                o_raw_pads__d_p__oe   = dp.oe,
+                i_raw_pads__d_p__i    = dp.i,
+                o_raw_pads__d_n__o    = dn.o,
+                o_raw_pads__d_n__oe   = dn.oe,
+                i_raw_pads__d_n__i    = dn.i,
+                o_raw_pads__pullup__o = usb_pads.pullup,
+            )
+
+        else:
+            self.params = self.params | dict(
+                o_ulpi_pads__data__o  = ulpi_data.o,
+                o_ulpi_pads__data__oe = ulpi_data.oe,
+                i_ulpi_pads__data__i  = ulpi_data.i,
+                o_ulpi_pads__clk__o   = usb_pads.clk,
+                o_ulpi_pads__stp__o   = usb_pads.stp,
+                i_ulpi_pads__nxt__i   = usb_pads.nxt,
+                i_ulpi_pads__dir__i   = usb_pads.dir,
+                o_ulpi_pads__rst__o   = reset,
+            )
 
         self.specials += Instance(module_name,
             **self.params
