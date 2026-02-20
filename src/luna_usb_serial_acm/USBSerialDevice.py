@@ -12,13 +12,28 @@ class USBSerialDevice(Module):
     """
     Wrapper for compiled amaranth module
     """
-    def __init__(self, platform, usb_pads, stream_clockdomain="sys", usb_clockdomain="usb", usb_io_clockdomain="usb_io"):
+    def __init__(
+            self,
+            platform,
+            usb_pads,
+            stream_clockdomain="sys", usb_clockdomain="usb", usb_io_clockdomain="usb_io",
+            id_vendor=0x1209,
+            id_product=0x5af1,
+            manufacturer_string="MSE Lab",
+            product_string="ULPI Device"
+            ):
 
         # heuristically determine phy type used based
         use_ulpi_phy = hasattr(usb_pads, "clk")
 
         # build verilog
-        verilog_file, module_name = build(ulpi=use_ulpi_phy)
+        verilog_file, module_name = build(
+            ulpi                = use_ulpi_phy,
+            idVendor            = id_vendor,
+            idProduct           = id_product,
+            manufacturer_string = manufacturer_string,
+            product_string      = product_string
+            )
 
         # Attach verilog block to module
         platform.add_source(verilog_file)
