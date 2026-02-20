@@ -26,9 +26,14 @@ class USBSerialDevice(Module):
         # heuristically determine phy type used based
         use_ulpi_phy = hasattr(usb_pads, "clk")
 
+        # heuristically determine packet size based on interface
+        # USB needs to have 512 and when we use ULPI we assume HS
+        max_packet_size = 512 if use_ulpi_phy else 64
+
         # build verilog
-        verilog_file, module_name = build(
+        verilog_file, module_name = build (
             ulpi                = use_ulpi_phy,
+            max_packet_size     = max_packet_size,
             idVendor            = id_vendor,
             idProduct           = id_product,
             manufacturer_string = manufacturer_string,

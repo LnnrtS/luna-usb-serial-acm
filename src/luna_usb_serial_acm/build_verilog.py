@@ -18,6 +18,7 @@ def build(
     idProduct=0x5af1,
     manufacturer_string="GSD",
     product_string="ButterStick r1.0 ACM",
+    max_packet_size = 64,
     ulpi = False,
     output_dir = None
     ):
@@ -35,7 +36,8 @@ def build(
                 idVendor=idVendor,
                 idProduct=idProduct, 
                 manufacturer_string=manufacturer_string,
-                product_string=product_string
+                product_string=product_string,
+                max_packet_size=max_packet_size
                 )
             
             self.rx = Record(usb.rx.layout)
