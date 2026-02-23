@@ -1,7 +1,7 @@
 # This file is Copyright (c) 2023-2021 Greg Davill <greg.davill@gmail.com>
 # License: BSD
 
-from migen import Module, TSTriple, ClockSignal, ResetSignal, Instance, Signal
+from migen import Module, TSTriple, ClockSignal, ResetSignal, Instance, Signal, ClockDomainsRenamer
 # import litex
 from litex.soc.interconnect import stream
 
@@ -17,6 +17,8 @@ class USBSerialDevice(Module):
             platform,
             usb_pads,
             stream_clockdomain="sys", usb_clockdomain="usb", usb_io_clockdomain="usb_io",
+            rx_fifo_depth = 1024,
+            tx_fifo_depth = 1024,
             id_vendor=0x1209,
             id_product=0x5af1,
             manufacturer_string="MSE Lab",
@@ -51,9 +53,16 @@ class USBSerialDevice(Module):
         tx_cdc = stream.ClockDomainCrossing([("data", 8)], stream_clockdomain, usb_clockdomain)
         rx_cdc = stream.ClockDomainCrossing([("data", 8)], usb_clockdomain, stream_clockdomain)
         self.submodules += tx_cdc, rx_cdc
+
+        # Add phy side fifos
+        tx_fifo = ClockDomainsRenamer(usb_clockdomain)(stream.SyncFIFO([("data", 8)], depth=tx_fifo_depth))
+        rx_fifo = ClockDomainsRenamer(usb_clockdomain)(stream.SyncFIFO([("data", 8)], depth=rx_fifo_depth))
+        self.submodules += tx_fifo, rx_fifo
         
         self.comb += [
             self.usb_tx.connect(tx_cdc.sink),
+            tx_cdc.source.connect(tx_fifo.sink),
+            rx_fifo.source.connect(rx_cdc.sink),
             rx_cdc.source.connect(self.usb_rx),
         ]
 
@@ -64,18 +73,18 @@ class USBSerialDevice(Module):
             i_rst_sync   = ResetSignal(usb_clockdomain),
 
             # Tx stream (Data out: USB device to computer)
-            o_tx__ready = tx_cdc.source.ready,
-            i_tx__valid = tx_cdc.source.valid,
-            i_tx__first = tx_cdc.source.first,
-            i_tx__last = tx_cdc.source.last,
-            i_tx__payload = tx_cdc.source.data,
+            o_tx__ready   = tx_fifo.source.ready,
+            i_tx__valid   = tx_fifo.source.valid,
+            i_tx__first   = tx_fifo.source.first,
+            i_tx__last    = tx_fifo.source.last,
+            i_tx__payload = tx_fifo.source.data,
             
             # Rx Stream (Data in: From a Computer to USB Device)
-            i_rx__ready = rx_cdc.sink.ready,
-            o_rx__valid = rx_cdc.sink.valid,
-            o_rx__first = rx_cdc.sink.first,
-            o_rx__last = rx_cdc.sink.last,
-            o_rx__payload = rx_cdc.sink.data,
+            i_rx__ready   = rx_fifo.sink.ready,
+            o_rx__valid   = rx_fifo.sink.valid,
+            o_rx__first   = rx_fifo.sink.first,
+            o_rx__last    = rx_fifo.sink.last,
+            o_rx__payload = rx_fifo.sink.data,
         )
         
         ##### Phy specific setup
